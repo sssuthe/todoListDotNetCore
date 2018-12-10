@@ -1,84 +1,83 @@
 using Microsoft.AspNetCore.Mvc;
+using MongoDB.Driver;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using TodoApi.Models;
+using TodoApi.Repositories;
 
 namespace TodoApi.Controllers
 {
-    [Route("api/[controller]")]
-    [ApiController]
-    public class TodoController : ControllerBase
+    [Produces("application/json")]
+    [Route("api/Todo")]
+    public class ToDoController : Controller
     {
-        private readonly TodoContext _context;
+        private readonly ITodoRepository _todoRepository;
 
-        public TodoController (TodoContext context)
+        public ToDoController(ITodoRepository  todoRepository)
         {
-            _context = context;
-
-            if (_context.TodoItems.Count() == 0)
-            {
-                _context.TodoItems.Add(new TodoItem{Name="Item1"});
-                _context.SaveChanges();
-            }
+            _todoRepository = todoRepository;
         }
 
+        // GET: api/Todo
         [HttpGet]
-        public ActionResult<List<TodoItem>> GetAll()
+        public async Task<IActionResult> Get()
         {
-            return _context.TodoItems.ToList();
+            return new ObjectResult(await _todoRepository.GetAllTodos());
         }
 
-        [HttpGet("{id}", Name="GetTodo")]
-        public ActionResult<TodoItem> GetById(long id)
+        // GET: api/Todo/TodoName
+        [HttpGet("{todo}", Name = "Get")]
+        public async Task<IActionResult> Get(string todo)
         {
-            var item = _context.TodoItems.Find(id);
+            var todoItem = await _todoRepository.GetTodo(todo);
 
-            if (item == null)
+            if (todoItem == null)
             {
-                return NotFound();
+                return new NotFoundResult();
             }
-            return item;
+
+            return new ObjectResult(todoItem);
         }
 
+        // POST: api/Todo
         [HttpPost]
-        public IActionResult Create(TodoItem item)
+        public async Task<IActionResult> Post([FromBody]TodoItem todo)
         {
-            _context.TodoItems.Add(item);
-            _context.SaveChanges();
-
-            return CreatedAtRoute("GetTodo", new {id = item.Id}, item);
+            await _todoRepository.Create(todo);
+            return new OkObjectResult(todo);
         }
 
-        [HttpPut("{id}")]
-        public IActionResult Update(long id, TodoItem item)
+        // PUT: api/Todo/5
+        [HttpPut("{todo}")]
+        public async Task<IActionResult> Put(string todo, [FromBody]TodoItem todoItem)
         {
-            var todo = _context.TodoItems.Find(id);
-            if(todo == null)
+            var todoFromDb = await _todoRepository.GetTodo(todo);
+
+            if (todoFromDb == null)
             {
-                return NotFound();
+                return new NotFoundResult();
             }
 
-            todo.IsComplete = item.IsComplete;
-            todo.Name = item.Name;
-
-            _context.TodoItems.Update(todo);
-            _context.SaveChanges();
-
-            return NoContent();
+            todoItem.Id = todoFromDb.Id;
+            await _todoRepository.Update(todoItem);
+            return new OkObjectResult(todoItem);
         }
 
-        [HttpDelete("{id}")]
-        public IActionResult Delete(long id)
+        // DELETE: api/ApiWithActions/5
+        [HttpDelete("{todo}")]
+        public async Task<IActionResult> Delete(string todo)
         {
-            var todo = _context.TodoItems.Find(id);
-            if (todo == null)
+            var todoFromDb = await _todoRepository.GetTodo(todo);
+
+            if (todoFromDb == null)
             {
-                return NotFound();
+                return new NotFoundResult();
             }
 
-            _context.TodoItems.Remove(todo);
-            _context.SaveChanges();
-            return NoContent();
+            await _todoRepository.Delete(todo);
+
+            return new OkResult();
         }
     }
 }

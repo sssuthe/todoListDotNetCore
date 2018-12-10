@@ -1,10 +1,24 @@
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
 namespace TodoApi.Models
 {
     public class TodoItem
     {
-        public long Id {get; set;}
-        public string Name {get; set;}
-        public bool IsComplete {get; set;}
+        [BsonId]
+        public ObjectId Id { get; set; }
+
+        [BsonElement]
+        public string userName {get; set;}
+
+        [BsonElement]
+        public string todo { get; set; }
+
+        [BsonElement]
+        public bool isDone {get; set;}
+
+        [BsonElement]
+        public bool hasAttachment { get; set; }
     }
 
 }
